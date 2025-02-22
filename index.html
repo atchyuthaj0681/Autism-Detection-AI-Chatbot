@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Autism Detection Chatbot</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            background: url('autism1.jpg') no-repeat center center fixed;
+            background-size: cover;
+        }
+        
+        .container, .analysis-container {
+            width: 40%;
+            height: 70vh;
+            margin: 20px;
+            background: rgba(255, 255, 255, 0.5);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chatbox, .analysis-box {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.6);
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .message {
+            padding: 8px;
+            margin: 5px;
+            border-radius: 10px;
+            max-width: 80%;
+            display: inline-block;
+        }
+        .user-message { background: #007bff; color: white; float: right; }
+        .bot-message { background: rgba(233, 236, 239, 0.8); color: black; float: left; }
+        
+        .input-container {
+            display: flex;
+            margin-top: 10px;
+            align-items: center;
+        }
+        
+        input {
+            flex: 1;
+            padding: 12px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+        
+        button {
+            padding: 12px;
+            border: none;
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-left: 5px;
+        }
+        
+        .voice-icon {
+            cursor: pointer;
+            margin-left: 10px;
+            font-size: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Autism Detection Chatbot <span class="voice-icon" onclick="toggleChatbotVoice()">🔊</span></h2>
+        <div class="chatbox" id="chatbox"></div>
+        <div class="input-container">
+            <input type="text" id="userInput" placeholder="Type your response here..." onkeypress="handleKeyPress(event)" />
+            <button onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+    
+    <div class="analysis-container">
+        <h2>Analysis <span class="voice-icon" onclick="speakAnalysis()">🔊</span></h2>
+        <div class="analysis-box" id="analysis"></div>
+    </div>
+    
+    <script>
+        let chatbotVoiceEnabled = false;
+        
+        function toggleChatbotVoice() {
+            chatbotVoiceEnabled = !chatbotVoiceEnabled;
+        }
+        
+        function handleKeyPress(event) {
+            if (event.key === "Enter") sendMessage();
+        }
+        
+        function speak(text) {
+            let utterance = new SpeechSynthesisUtterance(text);
+            speechSynthesis.speak(utterance);
+        }
+        
+        function speakAnalysis() {
+            let analysisText = document.getElementById("analysis").innerText;
+            if (analysisText) speak(analysisText);
+        }
+        
+        async function sendMessage() {
+            let userInput = document.getElementById("userInput").value;
+            if (!userInput.trim()) return;
+
+            let chatbox = document.getElementById("chatbox");
+            chatbox.innerHTML += `<div class="message user-message">${userInput}</div><div style="clear:both;"></div>`;
+            document.getElementById("userInput").value = "";
+            
+            let response = await fetch("http://127.0.0.1:5000/chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ response: userInput, user_id: "user123" })
+            });
+            
+            let data = await response.json();
+            chatbox.innerHTML += `<div class="message bot-message">${data.question}</div><div style="clear:both;"></div>`;
+            chatbox.scrollTop = chatbox.scrollHeight;
+            
+            if (chatbotVoiceEnabled) speak(data.question);
+
+            let analysisDiv = document.getElementById("analysis");
+            if (data.question === "End of assessment.") {
+                analysisDiv.innerHTML = `
+                    <strong>Final Autism Score:</strong> ${data.score}/20<br>
+                    <strong>Autism Level:</strong> ${data.level}<br>
+                    <strong>Assessment Summary:</strong><br> ${data.description}<br>
+                `;
+            } else {
+                analysisDiv.innerHTML = `
+                    <strong>Analysis:</strong> ${data.analysis}<br>
+                    <strong>How to Improve:</strong><br> ${data.improvement}
+                `;
+            }
+        }
+    </script>
+</body>
+</html>
